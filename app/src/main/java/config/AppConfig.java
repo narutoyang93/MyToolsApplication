@@ -24,7 +24,7 @@ public final class AppConfig {
     public static final String EXTERNAL_STORAGE_ROOT = Environment.getExternalStorageDirectory().getAbsolutePath();
 
     //私有文件存储目录
-    public static final String PRIVATE_FOLDER_PATH = PRIVATE_FOLDER_ROOT + "/" + APP_NAME.trim();
+    public static final String PRIVATE_FOLDER_PATH = PRIVATE_FOLDER_ROOT + "/" + APP_NAME.trim()+"/";
     //公开文件存储目录
-    public static final String PUBLIC_FOLDER_PATH = EXTERNAL_STORAGE_ROOT + "/" + APP_NAME.trim();
+    public static final String PUBLIC_FOLDER_PATH = EXTERNAL_STORAGE_ROOT + "/" + APP_NAME.trim()+"/";
 }
