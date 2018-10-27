@@ -21,25 +21,19 @@ import java.io.IOException;
  */
 public class AudioRecorderUtils {
     private static final String TAG = "AudioRecorderUtils";
-    //文件完整路径
-    private String filePath;
-    //文件夹路径
-    private String folderPath;
-    //文件名称
-    private String fileName;
-    //录音最长时间（单位：毫秒）
-    private int maxDuration;
-
+    private String filePath;//文件完整路径
+    private String folderPath;//文件夹路径
+    private String fileName;//文件名称
+    private int maxDuration;//录音最长时间（单位：毫秒）
+    private long startTime;
     private MediaRecorder mMediaRecorder;
-
-    // 记录是否正在进行录制
-    boolean isRecording = false;
-
+    boolean isRecording = false;// 是否正在进行录制
     private OnAudioStatusUpdateListener audioStatusUpdateListener;
-
     private int requestCode_permissions;
     private Context context;
     private OperationInterface permissionDeniedCallBack;
+    private OperationInterface startRecordCallBack;
+    private OperationInterface maxDurationReachedCallBack;//已抵达最大录音时长的回调
 
     /**
      * 文件存储默认sdcard/cadyd/record
@@ -79,8 +73,6 @@ public class AudioRecorderUtils {
         };
     }
 
-    private long startTime;
-
 
     /**
      * 开始录音 使用amr格式
@@ -95,12 +87,29 @@ public class AudioRecorderUtils {
             return;
         }
 
+        cancelRecord();//如果已经在录音，则取消当前的录音
+
         Log.d(TAG, "startRecord: ");
+        if (startRecordCallBack != null) {
+            startRecordCallBack.done(null);
+        }
         this.fileName = fileName;
         // 开始录音
         /* ①Initial：实例化MediaRecorder对象 */
         if (mMediaRecorder == null) {
             mMediaRecorder = new MediaRecorder();
+            mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
+                @Override
+                public void onInfo(MediaRecorder mr, int what, int extra) {
+
+                    if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                        stopRecord();
+                        if (maxDurationReachedCallBack != null) {
+                            maxDurationReachedCallBack.done(null);
+                        }
+                    }
+                }
+            });
         }
 
         try {
@@ -113,7 +122,11 @@ public class AudioRecorderUtils {
              * ，H263视频/ARM音频编码)、MPEG-4、RAW_AMR(只支持音频且音频编码要求为AMR_NB)
              */
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            filePath = folderPath + fileName + ".aac";
+            filePath = folderPath + fileName + (fileName.endsWith(".aac") ? "" : ".aac");
+            File file = new File(filePath);
+            if (file.exists()) {
+                file.delete();
+            }
             /* ③准备 */
             mMediaRecorder.setOutputFile(filePath);
             mMediaRecorder.setAudioEncodingBitRate(8);
@@ -126,13 +139,10 @@ public class AudioRecorderUtils {
             /* 获取开始时间* */
             startTime = System.currentTimeMillis();
             updateMicStatus();
-            Log.i("fan", "startTime" + startTime);
         } catch (IllegalStateException e) {
-            audioStatusUpdateListener.onError();
-            Log.i(TAG, "call startAmr(File mRecAudioFile) failed!" + e.getMessage());
+            onError(e);
         } catch (IOException e) {
-            audioStatusUpdateListener.onError();
-            Log.i(TAG, "call startAmr(File mRecAudioFile) failed!" + e.getMessage());
+            onError(e);
         }
     }
 
@@ -142,26 +152,12 @@ public class AudioRecorderUtils {
     public long stopRecord() {
         if (!isRecording || mMediaRecorder == null)
             return 0L;
-        Log.d(TAG, "stopRecord: ");
+        finishRecording();
         long endTime = System.currentTimeMillis();
-        //设置后不会崩
-        mMediaRecorder.setOnErrorListener(null);
-        mMediaRecorder.setPreviewDisplay(null);
-        try {
-            mMediaRecorder.stop();
-            isRecording = false;
-        } catch (IllegalStateException e) {
-            Log.d("stopRecord", e.getMessage());
-        } catch (RuntimeException e) {
-            Log.d("stopRecord", e.getMessage());
-        } catch (Exception e) {
-            Log.d("stopRecord", e.getMessage());
-        }
-        mMediaRecorder.reset();
-        mMediaRecorder.release();
-        mMediaRecorder = null;
         int time = (int) (endTime - startTime);
-        audioStatusUpdateListener.onStop(time, filePath);
+        if (audioStatusUpdateListener != null) {
+            audioStatusUpdateListener.onStop(time, filePath);
+        }
         filePath = "";
 
         return endTime - startTime;
@@ -171,18 +167,53 @@ public class AudioRecorderUtils {
      * 取消录音
      */
     public void cancelRecord() {
-        if (!isRecording || mMediaRecorder != null) {
-            mMediaRecorder.stop();
-            mMediaRecorder.reset();
-            mMediaRecorder.release();
-            mMediaRecorder = null;
-            isRecording = false;
-        }
+        if (!isRecording || mMediaRecorder == null)
+            return;
+        finishRecording();
+
         File file = new File(filePath);
         if (file.exists())
             file.delete();
         filePath = "";
+    }
 
+
+    /**
+     * 结束录音
+     */
+    private void finishRecording() {
+        isRecording = false;
+        if (mMediaRecorder != null) {
+            //设置后不会崩
+            mMediaRecorder.setOnErrorListener(null);
+            mMediaRecorder.setPreviewDisplay(null);
+            try {
+                mMediaRecorder.stop();
+            } catch (IllegalStateException e) {
+                Log.d("stopRecord", e.getMessage());
+            } catch (RuntimeException e) {
+                Log.d("stopRecord", e.getMessage());
+            } catch (Exception e) {
+                Log.d("stopRecord", e.getMessage());
+            }
+            mMediaRecorder.reset();
+            mMediaRecorder.release();
+            mMediaRecorder = null;
+        }
+    }
+
+
+    /**
+     * 录音异常
+     *
+     * @param e
+     */
+    private void onError(Exception e) {
+        finishRecording();
+        if (audioStatusUpdateListener != null) {
+            audioStatusUpdateListener.onError();
+        }
+        Log.d(TAG, "call startAmr(File mRecAudioFile) failed!" + e.getMessage());
     }
 
     private final Handler mHandler = new Handler();
@@ -199,6 +230,18 @@ public class AudioRecorderUtils {
 
     public void setPermissionDeniedCallBack(OperationInterface permissionDeniedCallBack) {
         this.permissionDeniedCallBack = permissionDeniedCallBack;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setStartRecordCallBack(OperationInterface startRecordCallBack) {
+        this.startRecordCallBack = startRecordCallBack;
+    }
+
+    public void setMaxDurationReachedCallBack(OperationInterface maxDurationReachedCallBack) {
+        this.maxDurationReachedCallBack = maxDurationReachedCallBack;
     }
 
     /**
@@ -239,6 +282,9 @@ public class AudioRecorderUtils {
      * 更新麦克状态
      */
     private void updateMicStatus() {
+        if (!isRecording) {
+            return;
+        }
         int SPACE = 100;// 间隔取样时间
         int BASE = 1;
         if (mMediaRecorder != null) {
