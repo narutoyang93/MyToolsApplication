@@ -26,6 +26,29 @@ import java.util.List;
 
 public class MyTools {
 
+    /**
+     * 根据手机的分辨率从 dp 的单位 转成为 px(像素) 注意：看仔细了，dip2px(x)!=dip2px(-x)
+     *
+     * @param dipValue
+     * @return
+     */
+    public static int dip2px(Context context, float dipValue) {
+        float scale = context.getResources().getDisplayMetrics().density;
+        return (int) (dipValue * scale + 0.5f);
+    }
+
+    /**
+     * 根据手机的分辨率从 px(像素) 的单位 转成为 dp 注意：看仔细了，px2dip(x)!=px2dip(-x)
+     *
+     * @param pxValue
+     * @return
+     */
+    public static int px2dip(Context context, float pxValue) {
+        float scale = context.getResources().getDisplayMetrics().density;
+        return (int) (pxValue / scale + 0.5f);
+    }
+
+
     // 检查设备是否连接网络
     public static boolean isNetworkConnected(Context context) {
         ConnectivityManager connectivityManager = (ConnectivityManager) context
@@ -83,61 +106,6 @@ public class MyTools {
         } else {
             return true;
         }
-    }
-
-
-    /**
-     * 显示消息弹窗
-     *
-     * @param context
-     * @param title
-     * @param message
-     * @param isCancelable     //点击弹窗区域外是否自动消失
-     * @param okButtonText
-     * @param cancelButtonText
-     * @param OnOkClick
-     * @param onCancelClick
-     */
-    public static Dialog showDialog(Context context, String title, String message, boolean isCancelable,
-                                    String okButtonText, String cancelButtonText,
-                                    View.OnClickListener OnOkClick, View.OnClickListener onCancelClick) {
-        int layoutRes = R.layout.dialog_general;
-        LinearLayout layout = (LinearLayout) LayoutInflater.from(context).inflate(layoutRes, null);
-        final Dialog dialog = new AlertDialog.Builder(context).create();
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0x00ffffff));//使dialog自带背景透明，这样才能看到圆角效果（如果布局背景有设置圆角的话）
-        dialog.setCancelable(isCancelable);
-        dialog.show();
-        dialog.getWindow().setContentView(layout);
-
-        TextView tvTitle = (TextView) layout.findViewById(R.id.tv_title);
-        TextView messageTextView = (TextView) layout.findViewById(R.id.message);
-        Button okButton = (Button) layout.findViewById(R.id.okButton);
-        Button cancelButton = (Button) layout.findViewById(R.id.cancelButton);
-
-        if (TextUtils.isEmpty(title)) {// 没有title
-            tvTitle.setVisibility(View.GONE);
-        } else {
-            tvTitle.setText(title);
-        }
-
-        messageTextView.setText(message);// 设置弹窗消息内容
-        // 没有按钮
-        if (TextUtils.isEmpty(cancelButtonText) && TextUtils.isEmpty(okButtonText)) {
-            LinearLayout buttonLayout = (LinearLayout) layout.findViewById(R.id.button);
-            buttonLayout.setVisibility(View.GONE);
-        } else {
-            if (TextUtils.isEmpty(cancelButtonText)) {// 没有取消按钮
-                layout.findViewById(R.id.line2).setVisibility(View.GONE);
-                cancelButton.setVisibility(View.GONE);
-            } else {
-                cancelButton.setText(cancelButtonText);
-                cancelButton.setOnClickListener(new DefaultClickListener(dialog, onCancelClick));
-            }
-            okButton.setText(okButtonText);
-            okButton.setOnClickListener(new DefaultClickListener(dialog, OnOkClick));
-        }
-
-        return dialog;
     }
 
 
