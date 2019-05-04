@@ -2,10 +2,11 @@ package com.naruto.mytoolsapplication;
 
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import com.bumptech.glide.Glide;
@@ -27,17 +28,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void test1(View view) {
-        if (audioRecorderUtils == null) {
-            audioRecorderUtils = new AudioRecorderUtils(this, AppConfig.PUBLIC_FOLDER_PATH, 60000, PERMISSIONS_REQUEST_CODE_RECORD);
-        }
-        audioRecorderUtils.startRecord("abc123");
+        Log.d("MainActivity", "--->test1: EXTERNAL_PRIVATE_STORAGE_ROOT=" + AppConfig.EXTERNAL_PRIVATE_STORAGE_ROOT);
+        Log.d("MainActivity", "--->test1: EXTERNAL_PUBLIC_STORAGE_ROOT=" + AppConfig.EXTERNAL_PUBLIC_STORAGE_ROOT);
+        Log.d("MainActivity", "--->test1: EXTERNAL_STORAGE_ROOT=" + AppConfig.EXTERNAL_STORAGE_ROOT);
+        Log.d("MainActivity", "--->test1: INTERNAL_PRIVATE_STORAGE_ROOT=" + AppConfig.INTERNAL_PRIVATE_STORAGE_ROOT);
     }
 
 
     public void test2(View view) {
-        if (audioRecorderUtils != null) {
-            audioRecorderUtils.stopRecord();
-        }
+
     }
 
     @Override
